@@ -1,0 +1,2 @@
+[console_scripts]
+tanuki = tanuki_bot.cli.app:app
