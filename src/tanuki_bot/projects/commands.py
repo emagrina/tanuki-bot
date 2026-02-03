@@ -41,7 +41,7 @@ def project_up(
         reg.set_active(existing.id)
         reg.touch_last_used(existing.id)
         console.print(
-            f"[bold bright_cyan]Active[/] {existing.name} → id=[bold]{existing.id}[/] path=[dim]{existing.repo_path}[/]"
+            f"[bold dark_orange]Active[/] {existing.name} → id=[bold]{existing.id}[/] path=[dim]{existing.repo_path}[/]"
         )
         return
 
@@ -50,7 +50,7 @@ def project_up(
     reg.touch_last_used(proj.id)
 
     console.print(
-        f"[bold bright_cyan]Registered[/] {proj.name} → id=[bold]{proj.id}[/] path=[dim]{proj.repo_path}[/]"
+        f"[bold dark_orange]Registered[/] {proj.name} → id=[bold]{proj.id}[/] path=[dim]{proj.repo_path}[/]"
     )
 
 
@@ -67,7 +67,7 @@ def list_projects() -> None:
 
     table = Table(title="Tanuki Projects", show_header=True, header_style="bold bright_white")
     table.add_column("Active", style="yellow", no_wrap=True)
-    table.add_column("ID", style="bright_cyan", no_wrap=True)
+    table.add_column("ID", style="dark_orange", no_wrap=True)
     table.add_column("Name", style="white")
     table.add_column("Repo path", style="dim")
 
@@ -91,7 +91,7 @@ def use_project(
 
     reg.set_active(project_id)
     reg.touch_last_used(project_id)
-    console.print(f"[bold bright_cyan]Active[/] {proj.name} ([bold]{proj.id}[/])")
+    console.print(f"[bold dark_orange]Active[/] {proj.name} ([bold]{proj.id}[/])")
 
 
 @project_app.command("show")
@@ -110,7 +110,7 @@ def show_project(
         console.print(f"[bold red]Error[/]: Project '{pid}' not found in registry.")
         raise typer.Exit(code=1)
 
-    console.print(f"[bold bright_cyan]{proj.name}[/]  id=[bold]{proj.id}[/]")
+    console.print(f"[bold dark_orange]{proj.name}[/]  id=[bold]{proj.id}[/]")
     console.print(f"[dim]repo:[/] {proj.repo_path}")
     console.print(f"[dim]created:[/] {proj.created_at}")
     console.print(f"[dim]last used:[/] {proj.last_used_at or '-'}")
@@ -135,7 +135,7 @@ def set_path(
     reg.touch_last_used(project_id)
 
     console.print(
-        f"[bold bright_cyan]Updated path[/] {proj.name} → id=[bold]{project_id}[/] path=[dim]{new_path}[/]"
+        f"[bold dark_orange]Updated path[/] {proj.name} → id=[bold]{project_id}[/] path=[dim]{new_path}[/]"
     )
 
 
@@ -155,7 +155,7 @@ def rename_project(
 
     reg.rename(project_id, name)
     reg.touch_last_used(project_id)
-    console.print(f"[bold bright_cyan]Renamed[/] id=[bold]{project_id}[/] → {name}")
+    console.print(f"[bold dark_orange]Renamed[/] id=[bold]{project_id}[/] → {name}")
 
 
 @project_app.command("remove")
@@ -181,4 +181,4 @@ def remove_project(
             raise typer.Exit(code=0)
 
     reg.remove(project_id)
-    console.print(f"[bold bright_cyan]Removed[/] {proj.name} ([bold]{project_id}[/])")
+    console.print(f"[bold dark_orange]Removed[/] {proj.name} ([bold]{project_id}[/])")

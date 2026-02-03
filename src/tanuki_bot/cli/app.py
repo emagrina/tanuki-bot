@@ -10,7 +10,7 @@ from rich.prompt import Prompt
 
 from tanuki_bot.core.version import __version__
 from tanuki_bot.projects.commands import project_app
-from tanuki_bot.tasks.commands import task_app  # ✅ NEW
+from tanuki_bot.tasks.commands import task_app
 from tanuki_bot.ui.branding import show_banner
 from tanuki_bot.ui_web.server import serve
 
@@ -20,11 +20,17 @@ from tanuki_bot.core.doctor import run_doctor
 from tanuki_bot.config.config import get_model, set_model, set_openai_key
 from tanuki_bot.core.plan import plan_from_brief
 
+from tanuki_bot.core.runner import run_autonomous
+
 app = typer.Typer(add_completion=False, no_args_is_help=False)
 app.add_typer(project_app, name="project")
-app.add_typer(task_app, name="task")  # ✅ NEW
+app.add_typer(task_app, name="task")
 
 console = Console()
+
+ACCENT = "dark_orange"
+LINK = "dark_orange"
+ERR = "red"
 
 
 def _print_nice_openai_error(message: str) -> None:
@@ -36,8 +42,8 @@ def _print_nice_openai_error(message: str) -> None:
             "[bold]Tanuki can't call the OpenAI API because your API project has no available credits "
             "or billing isn't enabled.[/]\n\n"
             "[bold]Fix it here:[/]\n"
-            "• Billing: [cyan]https://platform.openai.com/settings/billing[/]\n"
-            "• Usage:  [cyan]https://platform.openai.com/usage[/]\n\n"
+            f"• Billing: [{LINK}]https://platform.openai.com/settings/billing[/]\n"
+            f"• Usage:  [{LINK}]https://platform.openai.com/usage[/]\n\n"
             "[bold]Then retry:[/]\n"
             "• [green]tanuki plan[/]\n\n"
             "[dim]Note: ChatGPT Plus is separate from API billing. The API uses OpenAI Platform credits.[/]"
@@ -47,7 +53,7 @@ def _print_nice_openai_error(message: str) -> None:
         body = (
             "[bold]Your API key looks invalid/revoked or not configured.[/]\n\n"
             "[bold]Fix it:[/]\n"
-            "• Create / manage keys: [cyan]https://platform.openai.com/api-keys[/]\n"
+            f"• Create / manage keys: [{LINK}]https://platform.openai.com/api-keys[/]\n"
             "• Re-run: [green]tanuki setup[/]\n\n"
             "[bold]Then retry:[/]\n"
             "• [green]tanuki doctor[/]\n"
@@ -69,9 +75,9 @@ def _print_nice_openai_error(message: str) -> None:
         body = (
             f"[bold]Error:[/]\n{message}\n\n"
             "[bold]Useful links:[/]\n"
-            "• API keys: [cyan]https://platform.openai.com/api-keys[/]\n"
-            "• Usage:    [cyan]https://platform.openai.com/usage[/]\n"
-            "• Billing:  [cyan]https://platform.openai.com/settings/billing[/]\n\n"
+            f"• API keys: [{LINK}]https://platform.openai.com/api-keys[/]\n"
+            f"• Usage:    [{LINK}]https://platform.openai.com/usage[/]\n"
+            f"• Billing:  [{LINK}]https://platform.openai.com/settings/billing[/]\n\n"
             "[dim]If this persists, run `tanuki doctor` and share the output.[/]"
         )
 
@@ -79,7 +85,7 @@ def _print_nice_openai_error(message: str) -> None:
         Panel(
             body,
             title=title,
-            border_style="red",
+            border_style=ERR,
             padding=(1, 2),
         )
     )
@@ -91,25 +97,19 @@ def main(
     version: bool = typer.Option(False, "--version", "-v", help="Show version and exit"),
 ) -> None:
     if version:
-        console.print(f"[bold bright_cyan]tanuki[/] v{__version__}")
+        console.print(f"[bold {ACCENT}]tanuki[/] v{__version__}")
         raise typer.Exit()
 
     if ctx.invoked_subcommand is None:
         show_banner(console)
 
         table = Table(title="Commands", show_header=True, header_style="bold bright_white")
-        table.add_column("Command", style="bright_cyan", no_wrap=True)
+        table.add_column("Command", style=ACCENT, no_wrap=True)
         table.add_column("What it does", style="white")
 
         def section(title: str) -> None:
-            # Fila “separador” que ocupa ambas columnas
             table.add_row(f"[bold]{title}[/]", "", style="dim")
-            # Línea en blanco para respirar (opcional)
-            # table.add_row("", "")
 
-        # --------------------------------
-        # Getting started / setup
-        # --------------------------------
         section("Getting started")
         table.add_row("tanuki project up --path <repo>", "Attach a repo folder and set it active")
         table.add_row("tanuki init", "Initialize Tanuki memory & backlog for the active project")
@@ -118,17 +118,11 @@ def main(
         table.add_row("tanuki model [name]", "Show or set the model (e.g. gpt-5-mini)")
         table.add_row("tanuki plan", "Generate ARCHITECTURE.md + tasks.json from a brief")
 
-        # --------------------------------
-        # Tasks
-        # --------------------------------
         section("Tasks")
         table.add_row("tanuki task list", "View current tasks (filters: --status/--priority/--tag)")
         table.add_row("tanuki task show <id>", "Show full details for one task")
         table.add_row("tanuki task add", "Append new tasks from an incremental request")
 
-        # --------------------------------
-        # Project management
-        # --------------------------------
         section("Projects")
         table.add_row("tanuki project list", "List registered projects")
         table.add_row("tanuki project show [id]", "Show project info (defaults to active)")
@@ -137,14 +131,9 @@ def main(
         table.add_row("tanuki project set-path <id> --path <folder>", "Update a project's repo path (registry only)")
         table.add_row("tanuki project remove <id>", "Remove a project from Tanuki registry (repo not deleted)")
 
-        # --------------------------------
-        # UI / automation
-        # --------------------------------
         section("UI / automation")
         table.add_row("tanuki ui", "Open the local dashboard (projects + backlog)")
-        table.add_row("tanuki run", "Run the autonomous loop (next step)")
-
-        console.print(table)
+        table.add_row("tanuki run", "Run the autonomous loop (task -> changes -> checks -> PR -> status)")
 
         console.print(table)
         console.print('\n[dim]Tip:[/] register current folder with [bold]tanuki project up --path .[/]\n')
@@ -155,7 +144,7 @@ def init() -> None:
     """Initialize Tanuki workspace for the active project."""
     try:
         path = init_project()
-        console.print(f"[green]✓ Tanuki initialized[/] at [dim]{path}[/]")
+        console.print(f"[green]Tanuki initialized[/] at [dim]{path}[/]")
     except RuntimeError:
         console.print("[bold red]Error[/]: No active project. Run [bold]tanuki project up --path <repo>[/]")
 
@@ -163,12 +152,12 @@ def init() -> None:
 @app.command()
 def setup() -> None:
     """Interactive setup: API key + default model."""
-    console.print("[bold bright_cyan]Tanuki setup[/]\n")
+    console.print(f"[bold {ACCENT}]Tanuki setup[/]\n")
 
     key = Prompt.ask("OpenAI API key", password=True)
     if key.strip():
         set_openai_key(key.strip())
-        console.print("[green]✓ API key saved[/]")
+        console.print("[green]API key saved[/]")
     else:
         console.print("[yellow]Skipped API key[/]")
 
@@ -176,7 +165,7 @@ def setup() -> None:
     console.print(f"\nCurrent model: [bold]{current}[/]")
     model_name = Prompt.ask("Model to use", default=current)
     set_model(model_name.strip())
-    console.print(f"[green]✓ Model set[/] → {get_model()}")
+    console.print(f"[green]Model set[/] -> {get_model()}")
 
 
 @app.command()
@@ -192,9 +181,9 @@ def model(
     """Show or set the current model."""
     if name:
         set_model(name)
-        console.print(f"[green]✓ Model set[/] → {get_model()}")
+        console.print(f"[green]Model set[/] -> {get_model()}")
     else:
-        console.print(f"[bold bright_cyan]Model[/] → {get_model()}")
+        console.print(f"[bold {ACCENT}]Model[/] -> {get_model()}")
 
 
 @app.command()
@@ -208,7 +197,7 @@ def plan(
     elif brief:
         brief_text = brief
     else:
-        console.print("[bold bright_cyan]Tanuki plan[/]\n")
+        console.print(f"[bold {ACCENT}]Tanuki plan[/]\n")
         brief_text = Prompt.ask("Paste a short brief (one paragraph is enough)")
 
     try:
@@ -217,10 +206,10 @@ def plan(
         console.print()
         _print_nice_openai_error(str(e))
         console.print()
-        console.print("[dim]Suggested flow:[/] [bold]tanuki project up[/] → [bold]tanuki init[/] → [bold]tanuki setup[/] → [bold]tanuki plan[/]")
+        console.print("[dim]Suggested flow:[/] [bold]tanuki project up[/] -> [bold]tanuki init[/] -> [bold]tanuki setup[/] -> [bold]tanuki plan[/]")
         raise typer.Exit(code=1)
 
-    console.print("[green]✓ Plan generated[/]")
+    console.print("Plan generated")
     console.print(f"[dim]Architecture:[/] {arch_path}")
     console.print(f"[dim]Tasks:[/] {tasks_path}")
 
@@ -228,15 +217,15 @@ def plan(
 @app.command()
 def doctor() -> None:
     """Run diagnostics to check Tanuki setup."""
-    console.print("[bold bright_cyan]Tanuki doctor[/]\n")
+    console.print(f"[bold {ACCENT}]Tanuki doctor[/]\n")
 
     results = run_doctor()
     has_error = False
 
     for ok, msg in results:
-        icon = "✓" if ok else "✗"
         color = "green" if ok else "red"
-        console.print(f"[{color}]{icon} {msg}[/]")
+        prefix = "OK" if ok else "FAIL"
+        console.print(f"[{color}]{prefix} {msg}[/]")
         if not ok:
             has_error = True
 
@@ -248,8 +237,48 @@ def doctor() -> None:
 
 
 @app.command()
-def run() -> None:
-    console.print("[bold bright_cyan]Run[/] → (pending) Autonomous loop: task → changes → tests → review.")
+def run(
+    max_tasks: int = typer.Option(1, "--max-tasks", "-n", help="Max tasks to process in this run"),
+    no_pr: bool = typer.Option(False, "--no-pr", help="Do not create PRs automatically"),
+    keep_going: bool = typer.Option(False, "--keep-going", help="Keep processing tasks even if one fails"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Do not write/commit/push; just simulate decisions"),
+) -> None:
+    """
+    Autonomous loop: picks next tasks, creates branches, applies changes, runs checks, pushes, opens PR, updates status.
+    """
+    console.print(f"[bold {ACCENT}]Tanuki run[/]\n")
+
+    try:
+        results = run_autonomous(
+            max_tasks=max_tasks,
+            create_pr=not no_pr,
+            keep_going=keep_going,
+            dry_run=dry_run,
+        )
+    except Exception as e:
+        console.print(f"[bold red]Error[/]: {e}")
+        raise typer.Exit(code=1)
+
+    if not results:
+        console.print("No runnable tasks found.")
+        return
+
+    for r in results:
+        if r.get("ok"):
+            task_id = r.get("task_id", "?")
+            status = "ok"
+            if r.get("message"):
+                console.print(r["message"])
+                continue
+            console.print(f"Task {task_id}: {status}")
+            if r.get("branch"):
+                console.print(f"[dim]branch:[/] {r['branch']}")
+            if r.get("pr"):
+                console.print(f"[dim]pr:[/] {r['pr']}")
+            if r.get("dry_run"):
+                console.print("[dim]dry-run: true[/]")
+        else:
+            console.print(f"[bold red]Run failed[/]: {r.get('error','unknown error')}")
 
 
 @app.command()

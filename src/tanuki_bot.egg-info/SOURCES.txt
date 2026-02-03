@@ -15,11 +15,15 @@ src/tanuki_bot/core/doctor.py
 src/tanuki_bot/core/init.py
 src/tanuki_bot/core/llm.py
 src/tanuki_bot/core/plan.py
+src/tanuki_bot/core/repo_scan.py
+src/tanuki_bot/core/runner.py
+src/tanuki_bot/core/task_add.py
 src/tanuki_bot/core/version.py
 src/tanuki_bot/projects/commands.py
 src/tanuki_bot/projects/models.py
 src/tanuki_bot/projects/registry.py
 src/tanuki_bot/store/state.py
+src/tanuki_bot/tasks/commands.py
 src/tanuki_bot/ui/branding.py
 src/tanuki_bot/ui_web/pages.py
 src/tanuki_bot/ui_web/server.py

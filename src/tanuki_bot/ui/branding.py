@@ -17,5 +17,5 @@ TANUKI_WORDMARK = r"""
 
 def show_banner(console: Console) -> None:
     console.print()
-    console.print(Text(TANUKI_WORDMARK, style="bold bright_cyan"))
+    console.print(Text(TANUKI_WORDMARK, style="bold dark_orange"))
     console.print()

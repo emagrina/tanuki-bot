@@ -42,7 +42,7 @@ def list_tasks(
         tasks = [t for t in tasks if any(x.lower() == tg for x in t.tags)]
 
     table = Table(title="Tasks", show_header=True, header_style="bold bright_white")
-    table.add_column("ID", style="bright_cyan", no_wrap=True)
+    table.add_column("ID", style="dark_orange", no_wrap=True)
     table.add_column("Status", style="white", no_wrap=True)
     table.add_column("Prio", style="white", no_wrap=True)
     table.add_column("Title", style="white")
@@ -70,7 +70,7 @@ def show_task(
         console.print(f"[bold red]Error[/]: Task {task_id} not found.")
         raise typer.Exit(code=1)
 
-    console.print(f"[bold bright_cyan]#{t.id}[/] {t.title}")
+    console.print(f"[bold dark_orange]#{t.id}[/] {t.title}")
     console.print(f"[dim]status:[/] {t.status}   [dim]priority:[/] {t.priority}")
     console.print(f"[dim]tags:[/] {', '.join(t.tags) if t.tags else '-'}")
     console.print(f"[dim]created:[/] {t.created_at}")
@@ -95,7 +95,7 @@ def add_tasks(
     elif brief:
         brief_text = brief
     else:
-        console.print("[bold bright_cyan]Tanuki task add[/]\n")
+        console.print("[bold dark_orange]Tanuki task add[/]\n")
         brief_text = Prompt.ask("What do you want to add/change? (one paragraph)")
 
     try:
