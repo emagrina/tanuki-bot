@@ -20,7 +20,7 @@ from tanuki_bot.core.doctor import run_doctor
 from tanuki_bot.config.config import get_model, set_model, set_openai_key
 from tanuki_bot.core.plan import plan_from_brief
 
-from tanuki_bot.core.runner import run_autonomous
+from tanuki_bot.core.runner import run_forever
 
 app = typer.Typer(add_completion=False, no_args_is_help=False)
 app.add_typer(project_app, name="project")
@@ -238,22 +238,32 @@ def doctor() -> None:
 
 @app.command()
 def run(
-    max_tasks: int = typer.Option(1, "--max-tasks", "-n", help="Max tasks to process in this run"),
+    max_tasks: int | None = typer.Option(
+        None,
+        "--max-tasks",
+        "-n",
+        help="Optional limit of tasks to process (debug). Default: run until done or blocked.",
+    ),
     no_pr: bool = typer.Option(False, "--no-pr", help="Do not create PRs automatically"),
-    keep_going: bool = typer.Option(False, "--keep-going", help="Keep processing tasks even if one fails"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Do not write/commit/push; just simulate decisions"),
+    poll: float | None = typer.Option(
+        None,
+        "--poll",
+        help="Daemon mode: if there are no TODO tasks, wait N seconds and check again.",
+    ),
 ) -> None:
     """
-    Autonomous loop: picks next tasks, creates branches, applies changes, runs checks, pushes, opens PR, updates status.
+    Autonomous loop: runs continuously until there are no TODO tasks left,
+    or until it cannot continue because only BLOCKED tasks remain.
     """
     console.print(f"[bold {ACCENT}]Tanuki run[/]\n")
 
     try:
-        results = run_autonomous(
-            max_tasks=max_tasks,
+        results = run_forever(
             create_pr=not no_pr,
-            keep_going=keep_going,
             dry_run=dry_run,
+            poll_seconds=poll,
+            max_tasks=max_tasks,
         )
     except Exception as e:
         console.print(f"[bold red]Error[/]: {e}")
@@ -263,23 +273,30 @@ def run(
         console.print("No runnable tasks found.")
         return
 
+    ok = sum(1 for r in results if r.get("ok"))
+    fail = sum(1 for r in results if not r.get("ok"))
+    console.print()
+    console.print(f"[bold]Summary[/]: [green]{ok} ok[/], [red]{fail} failed[/]")
+
     for r in results:
+        if r.get("message"):
+            console.print(r["message"])
+            continue
+
         if r.get("ok"):
             task_id = r.get("task_id", "?")
-            status = "ok"
-            if r.get("message"):
-                console.print(r["message"])
-                continue
-            console.print(f"Task {task_id}: {status}")
+            line = f"[green]OK[/] Task {task_id}"
+            if r.get("no_changes"):
+                line += " [dim](no changes)[/]"
+            console.print(line)
             if r.get("branch"):
-                console.print(f"[dim]branch:[/] {r['branch']}")
+                console.print(f"[dim]  branch:[/] {r['branch']}")
             if r.get("pr"):
-                console.print(f"[dim]pr:[/] {r['pr']}")
+                console.print(f"[dim]  pr:[/] {r['pr']}")
             if r.get("dry_run"):
-                console.print("[dim]dry-run: true[/]")
+                console.print("[dim]  dry-run: true[/]")
         else:
-            console.print(f"[bold red]Run failed[/]: {r.get('error','unknown error')}")
-
+            console.print(f"[red]FAIL[/] {r.get('error','unknown error')}")
 
 @app.command()
 def ui(
